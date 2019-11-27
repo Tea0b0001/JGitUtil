@@ -19,7 +19,7 @@
     - 获取所有分支列表
   - public static boolean checkoutBranch(Git git, String branchName, boolean createBranch)
     - 切换分支
-  -  public static boolean createBranch(Git git, String branchName)
+  - public static boolean createBranch(Git git, String branchName)
     - 创建分支
   - public static boolean deleteBranch(Git git, String... branchNames)
     - 删除分支
@@ -61,7 +61,7 @@
     - commit命令
   - public static boolean gitPush(Git git, String arg1, String arg2, int type)
     - push命令
-  -  public static boolean gitPush(Git git, String remote, String localBranchName, String arg1, String arg2, int type)
+  - public static boolean gitPush(Git git, String remote, String localBranchName, String arg1, String arg2, int type)
     - push命令
 - diff
   - public static List<DiffEntry> gitDiff(Git git, RevCommit oldCommit, RevCommit newCommit)
