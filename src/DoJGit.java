@@ -6,7 +6,7 @@
 public class DoJGit {
     public static void main(String... args) {
         //your code
-        System.out.println("dododododo");
+        System.out.println("dododnew");
     }
 
 }
