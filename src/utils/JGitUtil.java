@@ -2,15 +2,22 @@ package utils;
 
 import org.eclipse.jgit.api.*;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.ReflogEntry;
+import org.eclipse.jgit.diff.*;
+import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.patch.FileHeader;
+import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.*;
+import org.eclipse.jgit.treewalk.AbstractTreeIterator;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import session.SshFileSessionFactory;
 import vo.CommitLogItem;
+import vo.DiffStatItem;
 import vo.RemoteConfigItem;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -20,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * JGit Util
  * @author Tea0b0001
  * 2019/11/26
  */
@@ -44,6 +52,7 @@ public class JGitUtil {
      * @param file
      * @return
      */
+
     public static Git openGit(File file) {
         if (file == null || !file.exists()) {
             throw new IllegalArgumentException("file为null或file不存在");
@@ -519,6 +528,112 @@ public class JGitUtil {
 
 
 
+
+    //-------------------------------diff相关----------------------------------
+    /**
+     * 获取两次提交的差异
+     * @param git
+     * @param oldCommit 旧commit
+     * @param newCommit 新commit
+     * @return
+     */
+    public static List<DiffEntry> gitDiff(Git git, RevCommit oldCommit, RevCommit newCommit) {
+        Repository repository = git.getRepository();
+        DiffCommand diffCommand = git.diff();
+        AbstractTreeIterator oldTree = prepareTreeParser(repository, oldCommit);
+        AbstractTreeIterator newTree = prepareTreeParser(repository, newCommit);
+
+        diffCommand.setOldTree(oldTree);
+        diffCommand.setNewTree(newTree);
+        try {
+            return diffCommand.call();
+        } catch (GitAPIException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+
+    }
+
+    /**
+     * 生成commit对应的TreeIterator
+     * @param repository
+     * @param commit
+     * @return
+     */
+    private static AbstractTreeIterator prepareTreeParser(Repository repository, RevCommit commit) {
+        RevWalk walk = new RevWalk(repository);
+        try {
+            RevTree tree = walk.parseTree(commit.getTree().getId());
+            CanonicalTreeParser oldTreeParser = new CanonicalTreeParser();
+            try (ObjectReader oldReader = repository.newObjectReader()) {
+                oldTreeParser.reset(oldReader, tree.getId());
+            }
+            walk.dispose();
+            return oldTreeParser;
+        }catch (IOException ex) {
+           ex.printStackTrace();
+           return null;
+        }
+    }
+
+    /**
+     * 分析diff代码对比结果,得到统计结果
+     * @param git
+     * @param diffEntryList
+     * @return
+     */
+    public static DiffStatItem analyzeDiffEntryList(Git git, List<DiffEntry> diffEntryList) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        DiffFormatter diffFormatter = new DiffFormatter(byteArrayOutputStream);
+        diffFormatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
+        diffFormatter.setRepository(git.getRepository());
+
+        DiffStatItem diffStatItem = new DiffStatItem();
+        for (DiffEntry diffEntry : diffEntryList) {
+            analyzeDiffEntry(diffEntry, diffFormatter, diffStatItem);
+            byteArrayOutputStream.reset();
+        }
+        return diffStatItem;
+    }
+
+    /**
+     * 分析一个代码文件对比结果,加入统计结果
+     * @param diffEntry
+     * @param diffFormatter
+     * @param diffStatItem
+     */
+    public static void analyzeDiffEntry(DiffEntry diffEntry, DiffFormatter diffFormatter, DiffStatItem diffStatItem) {
+        try {
+            FileHeader fileReader = diffFormatter.toFileHeader(diffEntry);
+            List<HunkHeader> hunkHeaderList = (List<HunkHeader>)fileReader.getHunks();
+            for (HunkHeader hunkHeader : hunkHeaderList) {
+                EditList editList = hunkHeader.toEditList();
+                for (Edit edit : editList) {
+                    //根据edit类型计算统计结果
+                    switch (edit.getType()) {
+                        case INSERT: {
+                            diffStatItem.addInsertLines(edit.getEndB() - edit.getBeginB());
+                            break;
+                        } case REPLACE: {
+                            diffStatItem.addModifyLines(edit.getEndB() - edit.getBeginB());
+                            break;
+                        } case DELETE: {
+                            diffStatItem.addDeleteLines(edit.getEndA() - edit.getBeginA());
+                            break;
+                        } default: {
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+
+
+
     //--------------------------------log相关----------------------------------
     /**
      * 获取当前分支提交记录
@@ -573,6 +688,7 @@ public class JGitUtil {
         CommitLogItem commitLogItem = new CommitLogItem();
         PersonIdent authorIdent = revCommit.getAuthorIdent();
         PersonIdent committerIdent = revCommit.getCommitterIdent();
+        commitLogItem.setCommitId(revCommit.getId().getName());
         commitLogItem.setAuthorEmail(authorIdent.getEmailAddress());
         commitLogItem.setAuthorName(authorIdent.getName());
         commitLogItem.setBuffer(new String(revCommit.getRawBuffer()));

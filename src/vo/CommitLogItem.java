@@ -1,12 +1,17 @@
 package vo;
 
 import java.util.List;
+
 /**
+ * Commit Log View
  * @author Tea0b0001
  * 2019/11/26
  */
-
 public class CommitLogItem {
+
+    //提交ID
+    private String commitId;
+
     //提交时间
     private int commitTime;
 
@@ -29,6 +34,14 @@ public class CommitLogItem {
 
     //Change-Id列表
     private List<String> changeIds;
+
+    public String getCommitId() {
+        return commitId;
+    }
+
+    public void setCommitId(String commitId) {
+        this.commitId = commitId;
+    }
 
     public int getCommitTime() {
         return commitTime;

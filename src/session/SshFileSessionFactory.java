@@ -9,6 +9,7 @@ import org.eclipse.jgit.transport.OpenSshConfig;
 import org.eclipse.jgit.util.FS;
 
 /**
+ * SshSession建立工厂所需
  * @author Tea0b0001
  * 2019/11/26
  */

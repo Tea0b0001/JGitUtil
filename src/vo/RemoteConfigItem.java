@@ -2,6 +2,7 @@ package vo;
 
 import java.util.List;
 /**
+ * Config View
  * @author Tea0b0001
  * 2019/11/26
  */
