@@ -82,3 +82,13 @@
 
 
 
+
+依赖包:
+
+- org.eclipse.jgit-5.5.1.201910021850-r.jar
+- jsch-0.1.55.jar
+- slf4j-api-1.7.9.jar
+
+
+
+
